@@ -28,39 +28,33 @@ async function start() {
 
   const app = express();
 
-  // Required for Render (and any reverse proxy) so express-rate-limit works correctly
+  // Required for Render reverse proxy so express-rate-limit works
   app.set('trust proxy', 1);
 
-  app.use(rateLimit({ windowMs: 60_000, max: 300, standardHeaders: true, legacyHeaders: false }));
+  app.use(rateLimit({ windowMs: 60000, max: 300, standardHeaders: true, legacyHeaders: false }));
 
-  // Health check (no auth)
-  app.get('/health', (_, res) => res.json({ status: 'ok', ts: Date.now() }));
+  app.get('/health', function(req, res) { res.json({ status: 'ok', ts: Date.now() }); });
 
-  // Auth token stub - game server calls this in production to get a session token
-  // In Studio mode BritSovAPI uses Key auth directly, so this only matters in live servers
-  app.post('/auth/token', json(), (req, res) => {
-    // For now return a dummy token; implement MessagingService flow when going live
-    res.json({ token: process.env.MASTER_KEY, jobId: req.body && req.body.jobId });
+  // Auth token endpoint - used by game servers in production
+  app.post('/auth/token', json(), function(req, res) {
+    res.json({ token: process.env.MASTER_KEY, jobId: req.body ? req.body.jobId : null });
   });
 
-  // Auth middleware for all other routes
   app.use(authMiddleware);
 
-  // GraphQL endpoint
   app.use('/graphql', json(), expressMiddleware(apollo));
 
-  // Heartbeat endpoint
-  app.post('/servers/heartbeat', json(), (req, res) => {
-    console.log('[Heartbeat]', req.body && req.body.jobId);
+  app.post('/servers/heartbeat', json(), function(req, res) {
+    console.log('[Heartbeat]', req.body ? req.body.jobId : '');
     res.json({ ok: true });
   });
 
-  app.listen(PORT, () => {
-    console.log(`[API] Northminster API running on port ${PORT}`);
+  app.listen(PORT, function() {
+    console.log('[API] Northminster API running on port ' + PORT);
   });
 }
 
-start().catch((err) => {
+start().catch(function(err) {
   console.error('[FATAL]', err);
   process.exit(1);
 });
