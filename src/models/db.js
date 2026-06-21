@@ -1,7 +1,7 @@
 const { Pool } = require('pg');
 
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
+  connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
@@ -136,19 +136,78 @@ async function initDb() {
     // column added to the schema after a table was first created must be backfilled
     // explicitly. These statements are all idempotent and safe to run on every boot.
     await client.query(`
+      -- players
+      ALTER TABLE players ADD COLUMN IF NOT EXISTS created TIMESTAMPTZ NOT NULL DEFAULT NOW();
       ALTER TABLE players ADD COLUMN IF NOT EXISTS cash NUMERIC NOT NULL DEFAULT 0;
+
+      -- organisations
+      ALTER TABLE organisations ADD COLUMN IF NOT EXISTS created TIMESTAMPTZ NOT NULL DEFAULT NOW();
       ALTER TABLE organisations ADD COLUMN IF NOT EXISTS group_id TEXT;
       ALTER TABLE organisations ADD COLUMN IF NOT EXISTS discoverable BOOLEAN NOT NULL DEFAULT TRUE;
       ALTER TABLE organisations ADD COLUMN IF NOT EXISTS type TEXT NOT NULL DEFAULT 'civilian';
       ALTER TABLE organisations ADD COLUMN IF NOT EXISTS tag TEXT;
       ALTER TABLE organisations ADD COLUMN IF NOT EXISTS custom_permissions JSONB NOT NULL DEFAULT '[]';
       ALTER TABLE organisations ADD COLUMN IF NOT EXISTS role_set JSONB NOT NULL DEFAULT '[]';
+
+      -- bank_accounts
+      ALTER TABLE bank_accounts ADD COLUMN IF NOT EXISTS created TIMESTAMPTZ NOT NULL DEFAULT NOW();
+      ALTER TABLE bank_accounts ADD COLUMN IF NOT EXISTS balance NUMERIC NOT NULL DEFAULT 0;
+      ALTER TABLE bank_accounts ADD COLUMN IF NOT EXISTS player_id TEXT REFERENCES players(id) ON DELETE CASCADE;
       ALTER TABLE bank_accounts ADD COLUMN IF NOT EXISTS organisation_id TEXT REFERENCES organisations(id) ON DELETE CASCADE;
+
+      -- licenses
+      ALTER TABLE licenses ADD COLUMN IF NOT EXISTS created TIMESTAMPTZ NOT NULL DEFAULT NOW();
       ALTER TABLE licenses ADD COLUMN IF NOT EXISTS suspended_until TIMESTAMPTZ;
       ALTER TABLE licenses ADD COLUMN IF NOT EXISTS has_theory BOOLEAN NOT NULL DEFAULT FALSE;
       ALTER TABLE licenses ADD COLUMN IF NOT EXISTS categories JSONB NOT NULL DEFAULT '[]';
       ALTER TABLE licenses ADD COLUMN IF NOT EXISTS endorsements JSONB NOT NULL DEFAULT '[]';
+
+      -- properties
+      ALTER TABLE properties ADD COLUMN IF NOT EXISTS created TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+      -- vehicles
+      ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS created TIMESTAMPTZ NOT NULL DEFAULT NOW();
       ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS inventory JSONB NOT NULL DEFAULT '[]';
+      ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS player_id TEXT REFERENCES players(id) ON DELETE SET NULL;
+      ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS org_id TEXT REFERENCES organisations(id) ON DELETE SET NULL;
+      ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS property_id TEXT REFERENCES properties(id) ON DELETE SET NULL;
+
+      -- permissions
+      ALTER TABLE permissions ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'manual';
+
+      -- flags
+      ALTER TABLE flags ADD COLUMN IF NOT EXISTS created TIMESTAMPTZ NOT NULL DEFAULT NOW();
+      ALTER TABLE flags ADD COLUMN IF NOT EXISTS expires TIMESTAMPTZ;
+      ALTER TABLE flags ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT TRUE;
+      ALTER TABLE flags ADD COLUMN IF NOT EXISTS player_subject TEXT REFERENCES players(id) ON DELETE CASCADE;
+      ALTER TABLE flags ADD COLUMN IF NOT EXISTS vehicle_subject TEXT REFERENCES vehicles(id) ON DELETE CASCADE;
+      ALTER TABLE flags ADD COLUMN IF NOT EXISTS issuer_id TEXT REFERENCES players(id) ON DELETE SET NULL;
+
+      -- markers
+      ALTER TABLE markers ADD COLUMN IF NOT EXISTS created TIMESTAMPTZ NOT NULL DEFAULT NOW();
+      ALTER TABLE markers ADD COLUMN IF NOT EXISTS vehicle_subject TEXT REFERENCES vehicles(id) ON DELETE CASCADE;
+      ALTER TABLE markers ADD COLUMN IF NOT EXISTS issuer_id TEXT REFERENCES players(id) ON DELETE SET NULL;
+
+      -- records
+      ALTER TABLE records ADD COLUMN IF NOT EXISTS created TIMESTAMPTZ NOT NULL DEFAULT NOW();
+      ALTER TABLE records ADD COLUMN IF NOT EXISTS issuer_id TEXT REFERENCES players(id) ON DELETE SET NULL;
+      ALTER TABLE records ADD COLUMN IF NOT EXISTS subject_id TEXT REFERENCES players(id) ON DELETE CASCADE;
+      ALTER TABLE records ADD COLUMN IF NOT EXISTS charges JSONB NOT NULL DEFAULT '[]';
+
+      -- transactions
+      ALTER TABLE transactions ADD COLUMN IF NOT EXISTS created TIMESTAMPTZ NOT NULL DEFAULT NOW();
+      ALTER TABLE transactions ADD COLUMN IF NOT EXISTS from_id TEXT REFERENCES bank_accounts(id) ON DELETE SET NULL;
+      ALTER TABLE transactions ADD COLUMN IF NOT EXISTS to_id TEXT REFERENCES bank_accounts(id) ON DELETE SET NULL;
+
+      -- cmdr_logs
+      ALTER TABLE cmdr_logs ADD COLUMN IF NOT EXISTS created TIMESTAMPTZ NOT NULL DEFAULT NOW();
+      ALTER TABLE cmdr_logs ADD COLUMN IF NOT EXISTS executor TEXT;
+      ALTER TABLE cmdr_logs ADD COLUMN IF NOT EXISTS command TEXT;
+      ALTER TABLE cmdr_logs ADD COLUMN IF NOT EXISTS args JSONB NOT NULL DEFAULT '[]';
+
+      -- server_keys
+      ALTER TABLE server_keys ADD COLUMN IF NOT EXISTS label TEXT;
+      ALTER TABLE server_keys ADD COLUMN IF NOT EXISTS created TIMESTAMPTZ NOT NULL DEFAULT NOW();
     `);
 
     console.log('[DB] Schema initialised');
