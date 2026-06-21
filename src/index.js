@@ -76,7 +76,7 @@ async function start() {
       '<div class="cards">',
       '<div class="card"><div class="label">API</div><div class="value"><span class="dot ok"></span><span class="ok">Online</span></div></div>',
       '<div class="card"><div class="label">Database</div><div class="value"><span class="dot ' + dbStatus + '"></span><span class="' + dbStatus + '">' + (dbStatus === 'ok' ? 'Connected' : 'Error') + '</span></div></div>',
-      '<div class="card"><div class="label">Uptime</div><div class="value">' + Math.floor(process.uptime() + 's)') + 's</div></div>',
+      '<div class="card"><div class="label">Uptime</div><div class="value">' + Math.floor(process.uptime()) + 's</div></div>',
       '<div class="card"><div class="label">GraphQL</div><div class="value"><span class="dot ok"></span><span class="ok">/graphql</span></div></div>',
       '</div>',
       '<footer>Northminster &mdash; ' + new Date().toUTCString() + '</footer>',
