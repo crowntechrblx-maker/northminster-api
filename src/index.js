@@ -35,6 +35,10 @@ async function start() {
   const apollo = new ApolloServer({
     typeDefs,
     resolvers,
+    // BloxQL (the Roblox client) bundles multiple operations into a single
+    // HTTP request as a JSON array. Apollo rejects batched requests by default
+    // ("Operation batching disabled."), so enable them here.
+    allowBatchedHttpRequests: true,
     formatError: function(err) {
       console.error('[GraphQL Error]', err.message);
       return { message: err.message, locations: err.locations, path: err.path };
